@@ -10,7 +10,7 @@
 #import <objc/runtime.h>
 
 //推荐采用SEL作为key值
-SEL selKeyPathWithObjcetAndKey(id object, NSString *key) {
+SEL selectorKeyPathWithObjcetAndKey(id object, NSString *key) {
     NSString *str = [NSString stringWithFormat:@"%@%p", key, object];
     return NSSelectorFromString(str);
 }
@@ -19,12 +19,12 @@ NSString *stringKeyPathWithObjcetAndKey(id object, NSString *key) {
     return [NSString stringWithFormat:@"%@%p", key, object];
 }
 
-NSString *keyPathDeleteAddress(id object, NSString *key) {
+NSString *keyPathByDeleteAddress(id object, NSString *key) {
     NSRange range = [key rangeOfString:[NSString stringWithFormat:@"%p", object]];
     if (range.location != NSNotFound) {
         NSMutableString *deletekey = [key mutableCopy];
         [deletekey deleteCharactersInRange:range];
-        return deletekey;
+        return [deletekey copy];
     }
     return key;
 }
@@ -39,7 +39,7 @@ NSString *keyPathDeleteAddress(id object, NSString *key) {
                context:(void *)context
              withBlock:(LCSafeKVOBlock)block {
     
-    objc_setAssociatedObject(observer, selKeyPathWithObjcetAndKey(self, keyPath), block, OBJC_ASSOCIATION_COPY_NONATOMIC);
+    objc_setAssociatedObject(observer, selectorKeyPathWithObjcetAndKey(self, keyPath), block, OBJC_ASSOCIATION_COPY_NONATOMIC);
     [self addObserver:observer forKeyPath:keyPath options:options context:context];
 }
 
@@ -50,7 +50,7 @@ NSString *keyPathDeleteAddress(id object, NSString *key) {
                         change:(NSDictionary<NSKeyValueChangeKey,id> *)change
                        context:(void *)context {
     
-    LCSafeKVOBlock block = objc_getAssociatedObject(self, selKeyPathWithObjcetAndKey(object, keyPath));
+    LCSafeKVOBlock block = objc_getAssociatedObject(self, selectorKeyPathWithObjcetAndKey(object, keyPath));
     if (block) {
         block(change, context);
     }
@@ -111,7 +111,7 @@ NSString *keyPathDeleteAddress(id object, NSString *key) {
         return;
     }
     
-    objc_setAssociatedObject(observer, selKeyPathWithObjcetAndKey(self, keyPath), nil, OBJC_ASSOCIATION_COPY_NONATOMIC);
+    objc_setAssociatedObject(observer, selectorKeyPathWithObjcetAndKey(self, keyPath), nil, OBJC_ASSOCIATION_COPY_NONATOMIC);
     
     NSString *keyPathWithAddress = stringKeyPathWithObjcetAndKey(self, keyPath);
     dispatch_semaphore_wait(self.lc_kvoSemaphore, DISPATCH_TIME_FOREVER);
@@ -135,7 +135,7 @@ NSString *keyPathDeleteAddress(id object, NSString *key) {
         NSString *key;
         while ((key = enumerator.nextObject)) {
             id object = [self.lc_kvoMapTable objectForKey:key];
-            [object lc_removeObserver:self forKeyPath:keyPathDeleteAddress(object, key)];
+            [object lc_removeObserver:self forKeyPath:keyPathByDeleteAddress(object, key)];
         }
         [self.lc_kvoMapTable removeAllObjects];
         self.lc_kvoMapTable = nil;
